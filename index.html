@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://wcpiovjshssxdajpbqdt.supabase.co wss://wcpiovjshssxdajpbqdt.supabase.co; worker-src 'self' blob:; base-uri 'self'; form-action 'self'">
+<title>Scorekaart Selectie</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='12' fill='%238C3A2A'/%3E%3Crect x='7.5' y='11' width='9' height='7' rx='1.5' fill='white'/%3E%3Cpath d='M9.5 11V9a2.5 2.5 0 0 1 5 0v2' stroke='white' stroke-width='1.6' fill='none'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@600;700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <button class="brand" data-act="home" type="button"><span class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>Scorekaart Selectie</button>
+    <div class="who"><span class="live off" id="live"><i></i><span>Verbinden…</span></span><span id="me"></span></div>
+  </header>
+  <main id="app" lang="nl"><h1>Vacatures</h1><p class="intro">Laden…</p></main>
+</div>
+<div id="toast" hidden role="status" aria-live="polite"></div>
+<div id="copybox" hidden><strong>Kopieer de tekst hieronder</strong><textarea id="copytext" readonly aria-label="Tekst om te kopiëren"></textarea><div><button class="btn ghost sm" data-act="copyclose" type="button">Sluiten</button></div></div>
+<script src="vendor/supabase.js"></script>
+<script src="config.js"></script>
+<script src="site.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
