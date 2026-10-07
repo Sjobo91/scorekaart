@@ -8,6 +8,8 @@
   const CFG = window.SK_CONFIG;
   const sb = window.supabase.createClient(CFG.url, CFG.key, { auth: { persistSession: true, autoRefreshToken: true, storageKey: "sk-auth" } });
   window.SK_SB = sb;
+  // Formulier laten invullen vanuit de vacaturetekst (functie 'voorbereiden' op de server)
+  window.SK_PREP = pid => callFn("voorbereiden", { pid });
 
   const $ = (s, r = document) => r.querySelector(s);
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -252,10 +254,11 @@
     resolveReady();
   }
   async function logout() { try { await sb.auth.signOut(); } catch {} location.reload(); }
-  async function callLeden(body) {
+  function callLeden(body) { return callFn("leden", body); }
+  async function callFn(name, body) {
     try {
       const { data: { session } } = await sb.auth.getSession();
-      const r = await fetch(CFG.url + "/functions/v1/leden", { method: "POST", headers: { "Content-Type": "application/json", apikey: CFG.key, Authorization: "Bearer " + (session ? session.access_token : CFG.key) }, body: JSON.stringify(body) });
+      const r = await fetch(CFG.url + "/functions/v1/" + name, { method: "POST", headers: { "Content-Type": "application/json", apikey: CFG.key, Authorization: "Bearer " + (session ? session.access_token : CFG.key) }, body: JSON.stringify(body) });
       const j = await r.json().catch(() => ({}));
       return r.ok ? j : { error: j.error || "Dat lukte niet." };
     } catch { return { error: "Geen verbinding. Probeer het opnieuw." }; }

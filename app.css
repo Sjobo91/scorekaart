@@ -469,7 +469,7 @@ textarea.ruled{display:block;width:100%;min-height:0;border:0;border-radius:0;pa
 textarea.ruled:focus{outline:0;border:0;box-shadow:inset 2px 0 0 var(--accent);
   background-image:linear-gradient(to bottom,transparent 29px,var(--accent-line) 29px,var(--accent-line) 30px)}
 textarea.ruled::placeholder{color:var(--faint)}
-.gv-oordeel{display:flex;flex-wrap:wrap;align-items:center;gap:4px 22px;margin-top:22px}
+.gv-oordeel{display:flex;flex-wrap:wrap;align-items:center;gap:4px 17px;margin-top:22px}
 .gv-ol,.gv-tl{font-weight:600;font-size:14px;margin-right:6px}
 .gv-k{display:inline-flex;align-items:center;gap:9px;cursor:pointer;font-size:15px;padding:7px 0;user-select:none}
 .gv-k input{appearance:none;-webkit-appearance:none;width:19px;height:19px;margin:0;border:1.5px solid var(--line-strong);border-radius:50%;background:var(--surface);flex:none;cursor:pointer}
@@ -507,3 +507,54 @@ textarea.ruled::placeholder{color:var(--faint)}
   .gv-k.gv-na{grid-column:1 / -1}
 }
 @media (prefers-reduced-motion:reduce){textarea.ruled{transition:none}}
+
+/* Vacaturepagina: het formulier zelf, met kernwoorden, direct aan te passen */
+.pv-kern{max-width:70ch}
+.kw{display:grid;gap:7px}
+.kw-l{font-size:13px;font-weight:600;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:4px 11px;font-size:13.5px;font-weight:600}
+.kwline{font-size:13.5px;color:var(--accent);font-weight:500}
+.sheet .kwline{margin-top:4px}
+.pv{display:grid}
+.pv-c{padding:18px 0 16px;border-top:1px solid var(--line);display:grid;gap:8px;min-width:0}
+.pv-h{font-size:17px;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.pv-q{padding-left:20px;display:grid;gap:5px;font-weight:600;font-size:15px;max-width:70ch}
+.pv-a{display:grid;gap:2px;font-size:13.5px;color:var(--muted);max-width:76ch}
+.pv-a b{color:var(--ink);font-weight:600}
+.pv-edit{background:var(--sunk);border-radius:10px;padding:16px 18px;margin:10px 0;border-top:0;gap:12px}
+.pv-row{display:grid;grid-template-columns:minmax(0,1fr) 90px;gap:12px}
+.pv-row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:620px){.pv-row2{grid-template-columns:1fr}}
+
+/* Notitieboek: tabbladen per kandidaat, kladblok dat meeloopt, grote schrijfvlakken */
+.tabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:thin;border-bottom:1px solid var(--line);margin-top:2px;padding-inline:2px}
+.tab{flex:none;display:inline-flex;align-items:baseline;gap:8px;padding:10px 16px 9px;border:1px solid transparent;border-bottom:0;border-radius:10px 10px 0 0;background:transparent;color:var(--muted);font:inherit;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:-1px}
+.tab:hover{color:var(--ink);background:var(--sunk)}
+.tab.on{background:var(--surface);border-color:var(--line);color:var(--ink)}
+.tab-t{font-size:12.5px;font-weight:500;color:var(--faint)}
+.tab.on .tab-t{color:var(--muted)}
+.nb{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:18px;align-items:start;margin-top:14px}
+.nb .sheet{margin-top:0;grid-column:1;grid-row:1}
+.nb .kladblok{grid-column:2;grid-row:1}
+.kladblok{position:sticky;top:14px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px 10px;display:grid;gap:4px}
+.kladblok label{font-family:var(--f-display);font-size:17px;font-weight:600}
+textarea.lined{display:block;width:100%;height:calc(100vh - 150px);min-height:260px;max-height:760px;border:0;border-radius:0;padding:0 2px;margin:0;resize:none;
+  font-size:15px;line-height:28px;background-color:transparent;
+  background-image:linear-gradient(to bottom,transparent 27px,var(--line) 27px,var(--line) 28px);background-size:100% 28px;background-attachment:local}
+textarea.lined:focus{outline:0;background-image:linear-gradient(to bottom,transparent 27px,var(--accent-line) 27px,var(--accent-line) 28px)}
+textarea.lined::placeholder{color:var(--faint)}
+.kladblok .ks{font-size:12.5px;color:var(--faint)}
+@media (max-width:980px){
+  .nb{grid-template-columns:1fr}
+  .nb .kladblok{position:static;grid-column:1;grid-row:1}
+  .nb .sheet{grid-row:2}
+  textarea.lined{height:170px;min-height:0;resize:vertical}
+}
+.kws{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.kwc{border:1px solid var(--accent-line);color:var(--accent);border-radius:999px;padding:1px 9px;font-size:12.5px;font-weight:500;transition:background .2s,color .2s}
+.kwc.hit{background:var(--accent);border-color:var(--accent);color:#fff}
+.pv-c .kws{margin-top:0}
+.pv-q{font-weight:400}
+.pv-more{display:grid;gap:12px}
+.pv-more .pv-kern{margin:0}

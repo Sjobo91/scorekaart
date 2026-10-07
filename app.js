@@ -271,7 +271,7 @@ function render() {
   if (S.view === "edit" && !S.edit) S.view = S.pid && proc() ? "proc" : "home";
   app.innerHTML = S.view === "home" ? homeHTML() : S.view === "proc" ? procHTML() : S.view === "cand" ? candHTML() : editHTML();
   if (S.view === "cand") sizeAllRuled(app);
-  app.classList.toggle("narrow", S.view === "cand" || S.view === "edit");
+  app.classList.toggle("narrow", S.view === "edit");
   fillPeople(app);
   const key = S.view + "|" + (S.pid || "") + "|" + (S.view === "cand" ? S.cid : "");
   if (S.lastView !== key) { S.lastView = key; window.scrollTo({ top: 0 }); }
@@ -376,14 +376,14 @@ function procHTML() {
       <div class="lrow head" aria-hidden="true"><div>Kandidaat</div><div>Status</div><div>Gemiddeld</div><div></div></div>
       ${rows.map(x => rowHTML(p, x.c, x.r)).join("")}
     </div>` : `<div class="card empty"><p class="muted">${chair ? (hasVac ? (S.sample && !S.sampleOff ? "Voeg kandidaten toe met een code, of laat Claude een cv lezen." : "Voeg kandidaten toe met een code.") : "Hang eerst de vacature erin. Daarna voeg je kandidaten toe.") : "Nog geen kandidaten."}</p></div>`}
-    ${chair && !closed && hasVac ? `<div class="cands-tools"><button class="btn ghost sm" data-act="addcand-quick" type="button">+ Kandidaat met code</button>${S.sample && !S.sampleOff ? `<button class="btn ghost sm" data-act="cv-open" type="button">${ICON.file}Cv toevoegen</button>` : ""}</div>${SITE ? `<p class="muted small" style="margin-top:8px">Een cv-profiel bij een kandidaat? Stuur het cv naar Claude met de naam van de vacature en de code.</p>` : ""}` : ""}
+    ${chair && !closed && hasVac ? `<div class="cands-tools"><button class="btn ghost sm" data-act="addcand-quick" type="button">+ Kandidaat met code</button>${S.sample && !S.sampleOff ? `<button class="btn ghost sm" data-act="cv-open" type="button">${ICON.file}Cv toevoegen</button>` : ""}</div>${SITE ? `<p class="muted small" style="margin-top:8px">Cv-profiel nodig? Stuur het cv naar Claude.</p>` : ""}` : ""}
     <div id="cvsec">${S.cv ? cvPanelHTML(p) : ""}</div>
   </section>
   <section class="section"><div class="section-head"><h2>${hasVac ? `<span class="vnum" style="display:inline-grid;vertical-align:middle;margin-right:8px">3</span>` : ""}Commissie</h2>${chair ? `<button class="link small" data-act="edit" data-focus="commissie" type="button">Aanpassen</button>` : ""}</div>
     <div class="card pad"><div class="commissie" style="margin:0">
       ${panel.length ? panel.map(u => { const on = S.online.get(u), here = on && on.pid === id && u !== S.uid; return avatarChip(u, `${u === chairOf(p) ? `<span class="role">voorzitter</span>` : ""}${here ? `<i class="ondot" title="Nu online"></i>` : ""}`); }).join("") : `<span class="muted small">Nog niemand</span>`}
       ${!joined && S.uid && !S.readOnly && !closed ? `<button class="btn sm" data-act="join" type="button">Ik doe mee</button>` : ""}</div>
-      ${chair && !closed && !others ? `<p class="muted small" style="margin-top:10px">Deel deze pagina via de deelknop (Share) met de rol Contributor. Voeg je collega's daarna toe via Aanpassen. Zij zien dezelfde voorbereiding en scoren ieder voor zich.</p>` : ""}</div>
+      ${chair && !closed && !others && !SITE ? `<p class="muted small" style="margin-top:10px">Deel deze pagina via de deelknop (Share) met de rol Contributor. Voeg je collega's daarna toe via Aanpassen. Zij zien dezelfde voorbereiding en scoren ieder voor zich.</p>` : ""}</div>
   </section>
   ${nOpen >= 2 ? compareHTML(p, id) : ""}
   ${nOpen >= 1 || closed ? afrondenHTML(p, id) : ""}`;
@@ -393,32 +393,59 @@ function vacState(p) {
   return S.vac;
 }
 function vacSectionHTML(p, chair, hasVac) {
-  const e = vacState(p), a = p.vacature && p.vacature.analyse;
-  if (!hasVac || e.redo) {
-    if (!chair) return `<div class="card vcard"><div class="vhead"><h2><span class="vnum">1</span>Vacature</h2></div><p class="muted small">De voorzitter hangt de vacature er nog in. Daarna staat hier de gespreksvoorbereiding.</p></div>`;
-    return `<div class="card vcard" id="sec-vacature"><div class="vhead"><h2><span class="vnum">1</span>Hang de vacature erin</h2>${e.redo ? `<button class="link small" data-act="vac-redo-cancel" type="button">Annuleren</button>` : ""}</div>
-      ${SITE ? "" : `<p class="muted small">Claude leest de vacature en bereidt het gesprek voor: waar het om draait, welke competenties en kwaliteiten nodig zijn, de harde eisen en hoe je dat uitvraagt.</p>
-      <div><label class="lab" for="e-url">Link naar de vacature</label>
-        <div class="urlrow"><input type="url" id="e-url" data-f="url" value="${esc(e.url || "")}" placeholder="https://www.werkenvoordeventer.nl/vacatures/..." autocomplete="off" inputmode="url"><button class="btn ghost" data-act="fetch-url" type="button" ${e.imp && e.imp.state === "wait" ? "disabled" : ""}>Ophalen</button></div>
-        <div id="urlbox">${urlBoxHTML(e)}</div></div>`}
-      <div><label class="lab" for="e-vac">${SITE ? "Vacaturetekst" : "Of plak de tekst"}</label>
-        <div class="drop" id="drop"><textarea id="e-vac" data-f="vacTekst" rows="${e.vacTekst ? 8 : 3}" placeholder="Plak hier de tekst van de vacature, of sleep een bestand hierheen.">${esc(e.vacTekst || "")}</textarea></div>
-        <div class="vacbar"><label class="btn ghost sm filebtn" for="e-file">${ICON.file}Bestand kiezen<input type="file" id="e-file" class="sr" accept=".docx,.pdf,.txt,.md,.html,.htm,text/plain,text/html,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"></label><span class="muted small" id="filemsg">Word, PDF of tekst.</span></div></div>
-      ${S.sample && !S.sampleOff ? `<div class="anabar"><button class="btn" data-act="analyse" type="button" ${S.ana && S.ana.busy ? "disabled" : ""}>${ICON.spark}Gesprek voorbereiden</button><span class="muted small">Dit telt mee voor jouw gebruik van Claude.</span></div>`
-        : SITE ? `<div class="anabar"><button class="btn" data-act="vac-save" type="button">Opslaan</button><button class="btn ghost" data-act="edit" data-focus="criteria" type="button">Criteria zelf invullen</button></div>${p.vacature && p.vacature.tekst && !e.redo ? `<p class="muted small">De tekst staat erin. Claude kan de voorbereiding maken: vraag het in je Claude-gesprek met de naam van deze vacature.</p>` : ""}`
-        : `<p class="muted small">Voorbereiden met Claude werkt alleen als je deze pagina in Claude opent. Via Instellingen kun je de criteria zelf invullen.</p>`}
-      <div id="ana">${anaHTML(e)}</div></div>`;
-  }
-  const cs = crits(p), open = S.kernOpen, showCrit = S.critOpen ?? (window.innerWidth > 700);
-  return `<div class="card vcard" id="sec-vacature"><div class="vhead"><h2><span class="vnum">1</span>Gespreksvoorbereiding</h2><span class="btnrow">${chair ? `<button class="link small" data-act="edit" data-focus="criteria" type="button">Criteria aanpassen</button><button class="link small muted" data-act="vac-redo" type="button">${SITE ? "Vacaturetekst aanpassen" : "Vacature opnieuw inlezen"}</button>` : ""}${p.vacature && p.vacature.url ? `<a class="link small muted" href="${esc(p.vacature.url)}" target="_blank" rel="noopener">Vacature openen</a>` : ""}</span></div>
+  const e = vacState(p), a = p.vacature && p.vacature.analyse, cs = crits(p), tekst = p.vacature && p.vacature.tekst;
+  const editing = !!(S.crEdit && S.crEdit.pid === S.pid);
+  const showForm = !e.redo && (cs.length > 0 || !!(a && a.kern) || editing);
+  if (!chair && !showForm) return `<div class="card vcard"><div class="vhead"><h2><span class="vnum">1</span>Gespreksformulier</h2></div><p class="muted small">De voorzitter hangt de vacature er nog in. Daarna staat hier het formulier.</p></div>`;
+  return (chair && !showForm ? vacInputHTML(p, e) : "") + (showForm ? formPreviewHTML(p, chair, e, a, cs, tekst, editing) : "");
+}
+function vacInputHTML(p, e) {
+  const busy = S.prep && S.prep.busy && S.prep.pid === S.pid, perr = S.prep && S.prep.error && S.prep.pid === S.pid ? S.prep.error : "";
+  return `<div class="card vcard" id="sec-vacature"><div class="vhead"><h2><span class="vnum">1</span>Hang de vacature erin</h2>${e.redo ? `<button class="link small" data-act="vac-redo-cancel" type="button">Annuleren</button>` : ""}</div>
+    ${SITE ? "" : `<p class="muted small">Claude leest de vacature en bereidt het gesprek voor: waar het om draait, welke competenties en kwaliteiten nodig zijn, de harde eisen en hoe je dat uitvraagt.</p>
+    <div><label class="lab" for="e-url">Link naar de vacature</label>
+      <div class="urlrow"><input type="url" id="e-url" data-f="url" value="${esc(e.url || "")}" placeholder="https://www.werkenvoordeventer.nl/vacatures/..." autocomplete="off" inputmode="url"><button class="btn ghost" data-act="fetch-url" type="button" ${e.imp && e.imp.state === "wait" ? "disabled" : ""}>Ophalen</button></div>
+      <div id="urlbox">${urlBoxHTML(e)}</div></div>`}
+    <div><label class="lab" for="e-vac">${SITE ? "Vacaturetekst" : "Of plak de tekst"}</label>
+      <div class="drop" id="drop"><textarea id="e-vac" data-f="vacTekst" rows="${e.vacTekst ? 8 : 3}" placeholder="Plak hier de tekst van de vacature, of sleep een bestand hierheen." ${busy ? "disabled" : ""}>${esc(e.vacTekst || "")}</textarea></div>
+      <div class="vacbar"><label class="btn ghost sm filebtn" for="e-file">${ICON.file}Bestand kiezen<input type="file" id="e-file" class="sr" accept=".docx,.pdf,.txt,.md,.html,.htm,text/plain,text/html,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"></label><span class="muted small" id="filemsg">Word, PDF of tekst.</span></div></div>
+    ${busy ? `<div class="urlstate"><span class="spinner" aria-hidden="true"></span><div><strong>Het formulier wordt ingevuld…</strong><span class="muted small">Criteria, vragen, ankers en kernwoorden uit de vacature. Dit duurt meestal een halve minuut.</span></div></div>`
+      : S.sample && !S.sampleOff ? `<div class="anabar"><button class="btn" data-act="analyse" type="button" ${S.ana && S.ana.busy ? "disabled" : ""}>${ICON.spark}Formulier maken</button><button class="link small" data-act="cr-add" type="button">Of vul het zelf in</button></div>`
+      : SITE ? `<div class="anabar"><button class="btn" data-act="vac-prep" type="button">${ICON.spark}Formulier maken</button><button class="link small" data-act="cr-add" type="button">Of vul het zelf in</button></div>`
+      : `<div class="anabar"><button class="btn" data-act="cr-add" type="button">Formulier zelf invullen</button></div>`}
+    ${perr ? `<div class="errors">${esc(perr)}</div>` : ""}
+    <div id="ana">${anaHTML(e)}</div></div>`;
+}
+function formPreviewHTML(p, chair, e, a, cs, tekst, editing) {
+  const kw = (a && a.kernwoorden) || [], open = S.kernOpen, url = p.vacature && p.vacature.url;
+  return `<div class="card vcard" id="sec-vacature"><div class="vhead"><h2><span class="vnum">1</span>Gespreksformulier</h2><span class="btnrow">${chair ? `<button class="link small muted" data-act="vac-redo" type="button">${tekst ? "Vacaturetekst aanpassen" : "Vacaturetekst toevoegen"}</button>` : ""}${url ? `<a class="link small muted" href="${esc(url)}" target="_blank" rel="noopener">Vacature openen</a>` : ""}</span></div>
     <div id="ana">${anaHTML(e)}</div>
-    ${a && a.kern ? `<div class="ana-kern"><span class="eyebrow">Waar draait deze functie om</span><p>${esc(a.kern)}</p></div>` : ""}
-    <div><div class="section-head" style="margin-bottom:6px"><h3>Competenties en kwaliteiten, en hoe je ze uitvraagt</h3><button class="link small" data-act="critopen" type="button" aria-expanded="${showCrit}">${showCrit ? "Verberg de vragen" : `Toon de ${cs.length} criteria met vragen`}</button></div>
-      ${!showCrit ? `<p class="muted small">${cs.map(cr => esc(cr.name)).join(" · ")}</p>` : cs.length ? cs.map(cr => `<div class="prep-crit"><h3>${esc(cr.name)}${wOf(cr) > 1 ? `<span class="badge w">telt ${wOf(cr)}x</span>` : ""}</h3>${cr.desc ? `<p class="muted small">${esc(cr.desc)}</p>` : ""}
-        ${(cr.vragen || []).length ? `<ol>${cr.vragen.map(q => `<li>${esc(q)}</li>`).join("")}</ol>` : `<p class="muted small">Nog geen vragen. Voeg ze toe via Criteria aanpassen.</p>`}
-        ${cr.low || cr.high ? `<div class="anchors"><span><b>1</b> ${esc(cr.low)}</span><span><b>4</b> ${esc(cr.high)}</span></div>` : ""}</div>`).join("") : `<p class="muted small">Nog geen criteria.</p>`}</div>
-    ${a ? `<div><button class="link small" data-act="kern" type="button" aria-expanded="${open}">${open ? "Minder tonen" : "Harde eisen, wensen en aandachtspunten"}</button>${open ? anaDetailsHTML(a) : ""}</div>` : ""}
-</div>`;
+    ${kw.length ? `<div class="kw"><span class="kw-l">Kernwoorden</span><div class="chips">${kw.map(k => `<span class="chip">${esc(k)}</span>`).join("")}</div></div>` : ""}
+    <div class="pv">${cs.map((cr, i) => editing && S.crEdit.i === i ? crEditHTML(S.crEdit) : crPreviewHTML(cr, i, chair && !editing)).join("")}${editing && S.crEdit.i === -1 ? crEditHTML(S.crEdit) : ""}</div>
+    ${chair && !editing ? `<div><button class="btn ghost sm" data-act="cr-add" type="button">+ Criterium toevoegen</button></div>` : ""}
+    ${a && (a.kern || (a.harde_eisen || []).length) ? `<div class="pv-more"><button class="link small" data-act="kern" type="button" aria-expanded="${open}" style="justify-self:start">${open ? "Minder tonen" : "Meer uit de vacature"}</button>${open ? `${a.kern ? `<p class="pv-kern">${esc(a.kern)}</p>` : ""}${anaDetailsHTML(a)}` : ""}</div>` : ""}
+  </div>`;
+}
+function crPreviewHTML(cr, i, canEdit) {
+  const qs = cr.vragen || [], kw = cr.kernwoorden || [];
+  return `<section class="pv-c" id="pv-${esc(cr.id)}">
+    <div class="sec-top"><h3 class="pv-h">${esc(cr.name)}${wOf(cr) > 1 ? `<span class="sec-w">telt ${wOf(cr)}x</span>` : ""}</h3>${canEdit ? `<button class="link small" data-act="cr-edit" data-i="${i}" type="button">Aanpassen</button>` : ""}</div>
+    ${kw.length ? `<div class="kws">${kw.map(k => `<span class="kwc">${esc(k)}</span>`).join("")}</div>` : ""}
+    ${qs.length ? `<ol class="pv-q">${qs.map(q => `<li>${esc(q)}</li>`).join("")}</ol>` : `<p class="muted small">Nog geen vragen.</p>`}
+  </section>`;
+}
+function crEditHTML(st) {
+  const d = st.draft;
+  return `<section class="pv-c pv-edit" id="pv-edit">
+    <div class="pv-row"><div><label class="lab" for="cr-name">Criterium</label><input type="text" id="cr-name" data-cr="name" value="${esc(d.name)}" placeholder="Bijvoorbeeld Helder adviseren"></div>
+      <div><label class="lab" for="cr-w">Telt</label><select id="cr-w" data-cr="weight">${[1, 2, 3].map(w => `<option value="${w}" ${+d.weight === w ? "selected" : ""}>${w}x</option>`).join("")}</select></div></div>
+    <div><label class="lab" for="cr-vragen">Vragen <span class="muted small">(één per regel)</span></label><textarea id="cr-vragen" data-cr="vragen" rows="3">${esc(d.vragen)}</textarea></div>
+    <div><label class="lab" for="cr-kw">Kernwoorden <span class="muted small">(met komma's)</span></label><input type="text" id="cr-kw" data-cr="kw" value="${esc(d.kw)}"></div>
+    <div class="pv-row2"><div><label class="lab" for="cr-low">Niet gezien als</label><textarea id="cr-low" data-cr="low" rows="2">${esc(d.low)}</textarea></div>
+      <div><label class="lab" for="cr-high">Overtuigend als</label><textarea id="cr-high" data-cr="high" rows="2">${esc(d.high)}</textarea></div></div>
+    ${st.error ? `<div class="errors">${esc(st.error)}</div>` : ""}
+    <div class="btnrow"><button class="btn sm" data-act="cr-save" type="button">Opslaan</button><button class="btn ghost sm" data-act="cr-cancel" type="button">Annuleren</button>${st.i >= 0 ? `<button class="link small muted" data-act="cr-del" type="button">${st.sure ? "Zeker weten? Klik nog een keer" : "Verwijderen"}</button>` : ""}</div>
+  </section>`;
 }
 function kernHTML(p) {
   const a = p.vacature && p.vacature.analyse; if (!a || !a.kern) return "";
@@ -480,14 +507,8 @@ function candHTML() {
   S.shownMode = v.mode;
   return `
   <div class="crumb"><button class="link" data-act="proc" type="button">← ${esc(p.title)}</button></div>
-  <div class="titlebar">
-    <div><h1>${esc(candLabel(p, c))}</h1>${p.ronde || c.tijd ? `<p class="cand-sub">${esc([p.ronde, c.tijd].filter(Boolean).join(", "))}</p>` : ""}</div>
-    <div class="pager">
-      <button class="btn ghost sm" data-act="cand" data-cid="${prev ? esc(prev.id) : ""}" type="button" ${prev ? "" : "disabled"} aria-label="Vorige kandidaat">${ICON.prev}<span class="hide-sm">Vorige</span></button>
-      <span class="muted small">${idx + 1} van ${list.length}</span>
-      <button class="btn ghost sm" data-act="cand" data-cid="${next ? esc(next.id) : ""}" type="button" ${next ? "" : "disabled"} aria-label="Volgende kandidaat"><span class="hide-sm">Volgende</span>${ICON.next}</button>
-    </div>
-  </div>
+  <h1 class="sr">${esc(candLabel(p, c))}</h1>
+  <nav class="tabs" aria-label="Kandidaten">${list.map(k => `<button class="tab${k.id === c.id ? " on" : ""}" data-act="cand" data-cid="${esc(k.id)}" type="button"${k.id === c.id ? ` aria-current="page"` : ""}>${esc(candLabel(p, k))}${k.tijd ? `<span class="tab-t">${esc(k.tijd)}</span>` : ""}</button>`).join("")}</nav>
   <div id="statusbox">${statusBoxHTML(p, v)}</div>
   ${v.mode === "form" ? "" : prepHTML(p, c, v)}
   <div id="candmain">${mainHTML(p, c, v)}</div>`;
@@ -538,7 +559,7 @@ function mainHTML(p, c, v) {
 function loadForm() {
   const key = keyOf(S.pid, S.cid);
   if (S.formKey !== key) { S.formKey = key; S.formDirty = false; S.errors = null; S.uniformAck = false; S.secOn = new Set(); }
-  S.form = clone(S.drafts.get(key) || { scores: {}, notes: {}, antw: {}, advies: null, motivatie: "" });
+  S.form = clone(S.drafts.get(key) || { scores: {}, notes: {}, antw: {}, advies: null, motivatie: "", vrij: "" });
   S.form.scores = S.form.scores || {}; S.form.notes = S.form.notes || {}; S.form.antw = S.form.antw || {};
   S.saveText = S.drafts.has(key) ? "Bewaard, alleen zichtbaar voor jou" : "Wordt vanzelf bewaard";
 }
@@ -547,6 +568,10 @@ function formHTML(p, c) {
   const f = S.form, dis = S.readOnly ? "disabled" : "", canDV = S.sample && !S.sampleOff && !S.readOnly;
   return `
   ${S.readOnly ? `<p class="statline">Je kunt hier alleen meekijken.</p>` : ""}
+  <div class="nb">
+  <aside class="kladblok"><label for="vrij">Kladblok</label>
+    <textarea id="vrij" class="lined" placeholder="Alles wat opvalt." ${dis}>${esc(f.vrij || "")}</textarea>
+    <span class="ks">Collega's zien dit pas bij de uitslag.</span></aside>
   <form id="scoreform" class="sheet" novalidate>
     ${candBlocksHTML(p, c, f)}
     ${crits(p).map(cr => critHTML(cr, f)).join("")}
@@ -554,7 +579,7 @@ function formHTML(p, c) {
       <div class="sec-top"><h2 class="sec-h" id="t-advies">Advies</h2></div>
       <div class="gv-oordeel" role="radiogroup" aria-labelledby="t-advies">${Object.entries(ADVIES).map(([k, l]) => `<label class="gv-k"><input type="radio" name="advies" value="${k}" ${f.advies === k ? "checked" : ""} ${dis}><span>${l}</span></label>`).join("")}</div>
       <div class="gv-toel"><label class="gv-tl" for="motivatie">Wat gaf de doorslag?</label>
-        <textarea id="motivatie" class="ruled" rows="2" ${dis}>${esc(f.motivatie || "")}</textarea><div class="hints" id="h-motivatie">${nudgeHTML(f.motivatie)}</div></div>
+        <textarea id="motivatie" class="ruled" rows="3" ${dis}>${esc(f.motivatie || "")}</textarea><div class="hints" id="h-motivatie">${nudgeHTML(f.motivatie)}</div></div>
       <p class="miss" id="miss-advies" hidden></p>
     </section>
     <div class="send"><button class="btn" data-act="submit" id="submitbtn" type="button" ${dis}>Indienen</button><span class="muted small" id="progress">${progressHTML(p, f)}</span></div>
@@ -564,7 +589,8 @@ function formHTML(p, c) {
       <button class="link small muted" data-act="tips" type="button" aria-expanded="${S.tipsOpen}">Valkuilen</button>
       ${S.readOnly ? "" : `<button class="link small muted" data-act="absent" type="button">Ik was er niet bij</button>`}</div>
     <div class="tips" id="tipsbox" ${S.tipsOpen ? "" : "hidden"}><ul>${VALKUILEN.map(([a, b]) => `<li><strong>${a}.</strong> ${b}</li>`).join("")}</ul></div>
-  </form>`;
+  </form>
+  </div>`;
 }
 const onCls = id => S.secOn && S.secOn.has(id) ? " on" : "";
 const MARKS = [[1, "Niet gezien"], [2, "Beperkt"], [3, "Duidelijk"], [4, "Overtuigend"]];
@@ -572,17 +598,35 @@ function critHTML(cr, f) {
   const id = esc(cr.id), dis = S.readOnly ? "disabled" : "", v = f.scores[cr.id], qs = cr.vragen || [], ans = (f.antw || {})[cr.id] || {};
   return `<section class="sec${onCls("fs-" + cr.id)}" id="fs-${id}" data-sec>
     <div class="sec-top"><h2 class="sec-h" id="t-${id}">${esc(cr.name)}</h2>${wOf(cr) > 1 ? `<span class="sec-w">telt ${wOf(cr)}x</span>` : ""}</div>
-    ${qs.map((q, i) => `<label class="ask" for="a-${id}-${i}">${esc(q)}</label>
-      <textarea id="a-${id}-${i}" class="ruled" data-antw="${id}" data-qi="${i}" rows="2" ${dis}>${esc(ans[i] || "")}</textarea>${dvBox(id, i)}`).join("")}
+    ${kwChips(cr, f)}
+    ${qs.length ? qs.map((q, i) => `<label class="ask" for="a-${id}-${i}">${esc(q)}</label>
+      <textarea id="a-${id}-${i}" class="ruled" data-antw="${id}" data-qi="${i}" rows="4" ${dis}>${esc(ans[i] || "")}</textarea>${dvBox(id, i)}`).join("") : `<label class="sr" for="a-${id}-0">Notities</label><textarea id="a-${id}-0" class="ruled" data-antw="${id}" data-qi="0" rows="4" ${dis}>${esc(ans[0] || "")}</textarea>`}
     <div class="gv-oordeel" role="radiogroup" aria-labelledby="t-${id}"><span class="gv-ol" aria-hidden="true">Oordeel</span>
       ${MARKS.map(([n, l]) => `<label class="gv-k"><input type="radio" name="s-${id}" value="${n}" data-crit="${id}" ${v === n ? "checked" : ""} ${dis}><span>${l}</span></label>`).join("")}
       <label class="gv-k gv-na"><input type="radio" name="s-${id}" value="0" data-crit="${id}" ${v === 0 ? "checked" : ""} ${dis}><span>Niet aan bod</span></label></div>
     ${cr.low || cr.high ? `<div class="anch">${cr.low ? `<span><b>Niet gezien:</b> ${esc(cr.low)}</span>` : ""}${cr.high ? `<span><b>Overtuigend:</b> ${esc(cr.high)}</span>` : ""}</div>` : ""}
     <div class="gv-toel"><label class="gv-tl" for="n-${id}">Toelichting<span class="req" id="req-${id}" ${v === 1 || v === 4 ? "" : "hidden"}>verplicht bij dit oordeel</span></label>
-      <textarea id="n-${id}" class="ruled" data-note="${id}" rows="1" placeholder="Waarom dit oordeel?" ${dis}>${esc(f.notes[cr.id] || "")}</textarea>
+      <textarea id="n-${id}" class="ruled" data-note="${id}" rows="2" placeholder="Waarom dit oordeel?" ${dis}>${esc(f.notes[cr.id] || "")}</textarea>
       <div class="hints" id="h-${id}">${nudgeHTML(f.notes[cr.id])}</div></div>
     <p class="miss" id="miss-${id}" hidden></p>
   </section>`;
+}
+function kwHit(k, text) {
+  const t = String(text || "").toLowerCase(), w = String(k || "").toLowerCase().trim(); if (!w || !t) return false;
+  if (t.includes(w)) return true;
+  const stems = w.split(/[^a-z0-9\u00c0-\u024f]+/).filter(x => x.length >= 4).map(x => x.slice(0, 5));
+  return stems.length > 0 && stems.every(st => t.includes(st));
+}
+function critText(f, id) { const a = (f.antw || {})[id] || {}; return Object.values(a).join(" ") + " " + ((f.notes || {})[id] || ""); }
+function kwChips(cr, f) {
+  const kw = cr.kernwoorden || []; if (!kw.length) return "";
+  const t = critText(f, cr.id) + " " + (f.vrij || "");
+  return `<div class="kws" id="kw-${esc(cr.id)}" aria-label="Kernwoorden">${kw.map(k => `<span class="kwc${kwHit(k, t) ? " hit" : ""}" data-kw="${esc(k)}">${esc(k)}</span>`).join("")}</div>`;
+}
+function kwRefresh(id) {
+  const box = document.getElementById("kw-" + id); if (!box || !S.form) return;
+  const t = critText(S.form, id) + " " + (S.form.vrij || "");
+  box.querySelectorAll(".kwc").forEach(el => el.classList.toggle("hit", kwHit(el.dataset.kw, t)));
 }
 function dvBox(id, i) { const st = S.dvs[id + ":" + i]; return `<div class="dv" id="dv-${id}-${i}" ${st && st.items && st.items.length ? "" : "hidden"}>${st && st.items ? dvInner(st) : ""}</div>`; }
 function dvInner(st) { return `<span class="dvl">${st.busy ? `<span class="spinner" aria-hidden="true"></span>` : ""}Vraag door</span>${st.items && st.items.length ? `<ul>${st.items.map(q => `<li>${esc(q)}</li>`).join("")}</ul>` : ""}`; }
@@ -597,7 +641,7 @@ function candBlocksHTML(p, c, f) {
     ${toCheck.map(o => `<label class="ask" for="a-_eis-${o.i}"><span class="pre">${o.x.status === "nee" ? "Niet in het cv:" : "Checken:"}</span> ${esc(o.x.eis)}${o.x.vraag ? `<span class="sub">${esc(o.x.vraag)}</span>` : ""}</label>
       <textarea id="a-_eis-${o.i}" class="ruled" data-antw="_eis" data-qi="${o.i}" rows="1" ${dis}>${esc(ae[o.i] || "")}</textarea>`).join("")}
     ${pr.vragen.map((q, i) => `<label class="ask" for="a-_kv-${i}">${esc(q.vraag)}</label>
-      <textarea id="a-_kv-${i}" class="ruled" data-antw="_kv" data-qi="${i}" rows="2" ${dis}>${esc(ak[i] || "")}</textarea>${dvBox("_kv", i)}`).join("")}
+      <textarea id="a-_kv-${i}" class="ruled" data-antw="_kv" data-qi="${i}" rows="3" ${dis}>${esc(ak[i] || "")}</textarea>${dvBox("_kv", i)}`).join("")}
   </section>`;
 }
 /* live doorvragen: Claude leest mee met je notities */
@@ -719,9 +763,14 @@ function resultsHTML(p, c, v) {
   <section class="section"><div class="section-head"><h2>Scores</h2>${flags.length ? `<span class="muted small">Begin het gesprek bij de gemarkeerde criteria.</span>` : ""}</div>${scoreTable(p, st.done, st.key, order, b)}
     ${st.abs.length ? `<p class="muted small" style="margin-top:8px">Niet bij dit gesprek: ${st.abs.map(u => p.hideRaters ? esc("Beoordelaar " + (order.indexOf(u) + 1)) : `<span data-uid="${esc(u)}"><span class="n">…</span></span>`).join(", ")}</p>` : ""}</section>
   ${candNotesHTML(p, c, st.done, subs, order)}
+  ${kladHTML(p, st.done, subs, order)}
   <section class="section"><div class="section-head"><h2>Advies per beoordelaar</h2></div>
     <div class="card">${st.done.map((u, i) => `<div class="arow"><div>${raterTag(p, u, order)}</div><div>${adviesBadge(subs[i].advies)}</div><div>${subs[i].motivatie ? esc(subs[i].motivatie) : `<span class="muted">Geen toelichting</span>`}</div></div>`).join("")}</div></section>
   <section class="section" id="besluit-sec">${decisionHTML(p, c, b)}</section>`;
+}
+function kladHTML(p, raters, subs, order) {
+  const rows = raters.map((u, k) => { const v = subs[k] && String(subs[k].vrij || "").trim(); return v ? `<div class="arow"><div>${raterTag(p, u, order)}</div><div style="grid-column:2 / -1;white-space:pre-wrap">${esc(v)}</div></div>` : ""; }).filter(Boolean);
+  return rows.length ? `<section class="section"><div class="section-head"><h2>Kladblok</h2></div><div class="card">${rows.join("")}</div></section>` : "";
 }
 function candNotesHTML(p, c, raters, subs, order) {
   const pr = c.profiel; if (!pr) return "";
@@ -787,12 +836,13 @@ function verslagHTML(p, order, nm) {
     const table = `<table><thead><tr><th>Criterium</th>${st.done.map(u => `<th>${rn(u)}</th>`).join("")}<th>Gem.</th></tr></thead><tbody>${cs.map(cr => `<tr><td>${esc(cr.name)}${wOf(cr) > 1 ? ` (${wOf(cr)}x)` : ""}</td>${subs.map(x => { const v = x.scores ? x.scores[cr.id] : null; return `<td class="n">${v == null ? "" : v === 0 ? "n.v.t." : v}</td>`; }).join("")}<td class="n"><b>${nl(critStats(cr, subs).avg)}</b></td></tr>`).join("")}</tbody></table>`;
     const notes = cs.map(cr => { const li = st.done.map((u, i) => { const n = noteParts(subs[i], cr); return n.any ? `<li><b>${rn(u)}:</b> ${n.qa.map(x => `<i>${esc(x.q)}</i> ${esc(x.a)}`).concat(n.note ? [esc(n.note)] : []).join("<br>")}</li>` : ""; }).join(""); return li ? `<h3>${esc(cr.name)}</h3><ul>${li}</ul>` : ""; }).join("");
     const adv = st.done.map((u, i) => `<li><b>${rn(u)}:</b> ${esc(ADVIES[subs[i].advies] || "Geen advies")}${subs[i].motivatie ? ". " + esc(subs[i].motivatie) : ""}</li>`).join("");
+    const klad = st.done.map((u, i) => subs[i].vrij && String(subs[i].vrij).trim() ? `<li><b>${rn(u)}:</b> ${esc(String(subs[i].vrij).trim()).replace(/\n/g, "<br>")}</li>` : "").join("");
     const flags = flagsOf(p, subs).map(x => `${esc(x.cr.name)} (verschil ${x.st.spread}${(b.besproken || {})[x.cr.id] ? ", besproken" : ""})`).join(", ");
     const pr = c.profiel, prof = pr ? `<h3>Uit het cv (geanonimiseerd)</h3><p>${esc(pr.samenvatting)}</p>${pr.eisen.length ? `<ul>${pr.eisen.map(x => `<li><b>${x.status === "ja" ? "In het cv" : x.status === "nee" ? "Niet in het cv" : "Checken"}:</b> ${esc(x.eis)}${x.bewijs ? ` <span class="muted">(${esc(x.bewijs)})</span>` : ""}</li>`).join("")}</ul>` : ""}` : "";
     return `<section><h2>${esc(candLabel(p, c))}</h2>${prof}
       <p><b>${anyWeights(p) ? "Gewogen gemiddelde" : "Gemiddelde"}: ${nl(weighted(p, subs))}</b> op schaal 1 tot 4${st.abs.length ? `. Niet bij het gesprek: ${st.abs.map(rn).join(", ")}` : ""}.</p>
       ${table}${flags ? `<p>Grote verschillen: ${flags}.</p>` : ""}${notes ? `<h3>Onderbouwing per criterium</h3>${notes}` : ""}
-      <h3>Advies</h3><ul>${adv}</ul>
+      ${klad ? `<h3>Kladblok</h3><ul>${klad}</ul>` : ""}<h3>Advies</h3><ul>${adv}</ul>
       <h3>Besluit commissie</h3><div class="box">${b.besluit ? `<b>${esc(BESLUIT[b.besluit])}</b>${b.toelichting ? `<br>${esc(b.toelichting)}` : ""}${b.by && b.at ? `<br><span class="muted">Vastgelegd door ${esc((nm[b.by] || {}).name || "Collega")} op ${fmtDT(b.at)}</span>` : ""}` : "Nog geen besluit vastgelegd."}</div></section>`;
   }).join("");
   const critTable = `<table><thead><tr><th>Criterium</th><th>Gewicht</th><th>Zo ziet een 1 eruit</th><th>Zo ziet een 4 eruit</th></tr></thead><tbody>${cs.map(cr => `<tr><td><b>${esc(cr.name)}</b><br><span class="muted">${esc(cr.desc || "")}</span></td><td class="n">${wOf(cr)}x</td><td>${esc(cr.low || "")}</td><td>${esc(cr.high || "")}</td></tr>`).join("")}</tbody></table>`;
@@ -909,6 +959,7 @@ Werk zo:
 7. Gewicht: 2 voor het criterium dat de kern van de functie raakt, alleen als er één duidelijke kern is. Anders 1. Nooit hoger dan 2.
 8. Schrijf in helder Nederlands op B1-niveau. Korte zinnen. Geen jargon. Gebruik geen gedachtestreepjes.
 9. Neem team, gespreksdata en contactpersoon alleen over als ze in de tekst staan. Laat telefoonnummers en mailadressen weg.
+10. Kernwoorden: 6 tot 8 woorden of korte begrippen letterlijk uit de vacaturetekst die in goede antwoorden terug moeten komen. Per criterium 2 of 3 daarvan, of andere letterlijke begrippen uit de tekst die bij dat criterium horen.
 
 Antwoord met alleen dit JSON-object, zonder andere tekst:
 {
@@ -921,8 +972,9 @@ Antwoord met alleen dit JSON-object, zonder andere tekst:
   "wensen": ["wat de tekst als wens of pré noemt"],
   "tussen_de_regels": ["wat niet letterlijk in de tekst staat maar wel gevraagd wordt, met kort waarom"],
   "let_op": ["eis die vaag is, onnodig mensen uitsluit of lastig te toetsen is, en wat je ermee doet"],
+  "kernwoorden": ["letterlijk begrip uit de tekst"],
   "criteria": [
-    {"naam": "korte naam, 1 tot 3 woorden", "waarom": "waar dit in de vacature staat, kort", "waar_let_je_op": "1 zin", "anker_1": "1 zin", "anker_4": "1 zin", "vragen": ["vraag 1", "vraag 2"], "gewicht": 1}
+    {"naam": "korte naam, 1 tot 3 woorden", "waarom": "waar dit in de vacature staat, kort", "waar_let_je_op": "1 zin", "anker_1": "1 zin", "anker_4": "1 zin", "vragen": ["vraag 1", "vraag 2"], "kernwoorden": ["begrip 1", "begrip 2"], "gewicht": 1}
   ]
 }
 
@@ -940,8 +992,8 @@ function normAna(d) {
   return {
     functie: s(d && d.functie), kern: s(d && d.kern), team: s(d && d.team), contact: s(d && d.contact),
     gesprekken: (Array.isArray(d && d.gesprekken) ? d.gesprekken : []).map(g => ({ ronde: s(g && g.ronde), wanneer: s(g && g.wanneer) })).filter(g => g.wanneer).slice(0, 4),
-    harde_eisen: arr(d && d.harde_eisen), wensen: arr(d && d.wensen), tussen_de_regels: arr(d && d.tussen_de_regels), let_op: arr(d && d.let_op),
-    criteria: list.map(c => ({ naam: s(c && c.naam), waarom: s(c && c.waarom), waar_let_je_op: s(c && c.waar_let_je_op), anker_1: s(c && c.anker_1), anker_4: s(c && c.anker_4), vragen: arr(c && c.vragen, 4), gewicht: Math.min(2, Math.max(1, Math.round(+(c && c.gewicht)) || 1)) })).filter(c => c.naam).slice(0, 8)
+    harde_eisen: arr(d && d.harde_eisen), wensen: arr(d && d.wensen), tussen_de_regels: arr(d && d.tussen_de_regels), let_op: arr(d && d.let_op), kernwoorden: arr(d && d.kernwoorden, 10),
+    criteria: list.map(c => ({ naam: s(c && c.naam), waarom: s(c && c.waarom), waar_let_je_op: s(c && c.waar_let_je_op), anker_1: s(c && c.anker_1), anker_4: s(c && c.anker_4), vragen: arr(c && c.vragen, 4), kernwoorden: arr(c && c.kernwoorden, 5), gewicht: Math.min(2, Math.max(1, Math.round(+(c && c.gewicht)) || 1)) })).filter(c => c.naam).slice(0, 8)
   };
 }
 function anaError(code) {
@@ -982,7 +1034,7 @@ async function analyse() {
     let keptCrit = false;
     if (!crits(cur).length) {
       const used = new Set(idsInUse(S.pid).crit), ids = [];
-      upd.criteria = a.criteria.slice(0, 6).map(c => { let n = 1; while (used.has("k" + n) || ids.includes("k" + n)) n++; ids.push("k" + n); return { id: "k" + n, name: c.naam, desc: c.waar_let_je_op, low: c.anker_1, high: c.anker_4, weight: c.gewicht, vragen: c.vragen, bron: c.waarom }; });
+      upd.criteria = a.criteria.slice(0, 6).map(c => { let n = 1; while (used.has("k" + n) || ids.includes("k" + n)) n++; ids.push("k" + n); return { id: "k" + n, name: c.naam, desc: c.waar_let_je_op, low: c.anker_1, high: c.anker_4, weight: c.gewicht, vragen: c.vragen, kernwoorden: c.kernwoorden || [], bron: c.waarom }; });
       filled.push(upd.criteria.length + " criteria met ankers en gespreksvragen");
     } else keptCrit = true;
     await updProc(S.pid, upd);
@@ -1013,7 +1065,7 @@ function renderAna() { const e = curEd(), box = $("#ana"); if (box && e) box.inn
 function anaHTML(e) {
   const A = S.ana;
   if (A && A.busy) return `<div class="ana"><div class="ana-progress"><span class="spinner" aria-hidden="true"></span><div><strong id="ana-state">${A.started ? "Claude schrijft de voorstellen…" : "Claude leest de vacature…"}</strong><span class="muted small" id="ana-sub">${A.started ? "" : "Dit duurt meestal een halve tot een hele minuut."}</span></div><button class="btn quiet sm" data-act="ana-stop" type="button">Stoppen</button></div><div id="ana-live">${anaLiveHTML(A)}</div></div>`;
-  const err = (A && A.error ? `<div class="errors">${esc(A.error)}</div>` : "") + (e.autoFilled || e.keptCrit ? `<div class="okbox">${ICON.check}<div>${e.autoFilled ? `<strong>Ingevuld vanuit de vacature:</strong> ${esc(listNl(e.autoFilled))}. ` : ""}${e.keptCrit ? "Je bestaande criteria heb ik laten staan. Via Criteria aanpassen kun je de nieuwe voorstellen overnemen. " : ""}${e === S.vac ? "Controleer de voorbereiding en voeg daarna kandidaten toe." : ""}</div></div>` : "");
+  const err = (A && A.error ? `<div class="errors">${esc(A.error)}</div>` : "") + (e.autoFilled || e.keptCrit ? `<div class="okbox">${ICON.check}<div>${e.autoFilled ? `<strong>Ingevuld vanuit de vacature:</strong> ${esc(listNl(e.autoFilled))}. ` : ""}${e.keptCrit ? "Je bestaande criteria zijn blijven staan. " : ""}${e === S.vac ? "Pas aan wat niet klopt met Aanpassen bij een criterium." : ""}</div></div>` : "");
   const a = e.analyse; if (!a) return err;
   if (!e.anaOpen) return `${err}<div class="ana"><div class="ana-closed"><div class="ana-kern"><span class="eyebrow">Waar draait het om</span><p>${esc(a.kern)}</p></div><button class="link small" data-act="ana-open" type="button">Analyse en voorstellen bekijken</button></div></div>`;
   return `${err}<div class="ana">
@@ -1199,7 +1251,7 @@ async function cvAdd() {
 
 /* ---------- editor ---------- */
 function libFor(name) { return LIB.find(l => l.name.toLowerCase() === String(name || "").trim().toLowerCase()); }
-function editCrit(c, id) { return { id: id || c.id, name: c.name || "", desc: c.desc || "", low: c.low || "", high: c.high || "", weight: wOf(c), vragenText: (c.vragen || []).join("\n"), bron: c.bron || "" }; }
+function editCrit(c, id) { return { id: id || c.id, name: c.name || "", desc: c.desc || "", low: c.low || "", high: c.high || "", weight: wOf(c), vragenText: (c.vragen || []).join("\n"), kwText: (c.kernwoorden || []).join(", "), bron: c.bron || "" }; }
 function newEdit(id) {
   if (id) {
     const p = S.procs.get(id), used = idsInUse(id), v = p.vacature || {};
@@ -1218,8 +1270,9 @@ function newEdit(id) {
     panel: S.uid ? [S.uid] : [], panelOrig: [], chair: S.uid, open: [], q: "", usedCrit: [], usedCand: [],
     vacTekst: "", analyse: null, anaAt: null, anaOpen: false, pick: [], url: "", gesprekken: "", critTouched: false, autoFilled: null, imp: null };
 }
+const splitKw = t => String(t || "").split(/[,;\n]/).map(x => x.trim()).filter(Boolean).slice(0, 8);
 const sameName = (e, c) => e.criteria.some(x => x.name.trim().toLowerCase() === c.naam.toLowerCase());
-const critFromProp = (c, id) => ({ id, name: c.naam, desc: c.waar_let_je_op, low: c.anker_1, high: c.anker_4, weight: c.gewicht, vragenText: c.vragen.join("\n"), bron: c.waarom });
+const critFromProp = (c, id) => ({ id, name: c.naam, desc: c.waar_let_je_op, low: c.anker_1, high: c.anker_4, weight: c.gewicht, vragenText: c.vragen.join("\n"), kwText: (c.kernwoorden || []).join(", "), bron: c.waarom });
 const rondeNr = x => { const m = /(\d+)/.exec(String(x || "")); return m ? +m[1] : null; };
 function gesprekFor(a, ronde) {
   const list = (a && a.gesprekken) || []; if (!list.length) return "";
@@ -1370,6 +1423,7 @@ function critRowHTML(c, i, n) {
         <div><label class="lab" for="ch-${i}">Zo ziet een 4 eruit</label><textarea id="ch-${i}" data-ci="${i}" data-cf="high" rows="2">${esc(c.high)}</textarea></div></div>
       <div><label class="lab" for="cv-${i}">Vragen voor het gesprek <span class="muted small">(één per regel)</span></label><textarea id="cv-${i}" data-ci="${i}" data-cf="vragenText" rows="3">${esc(c.vragenText)}</textarea>
         ${!c.vragenText.trim() && libFor(c.name) ? `<button class="link small" data-act="libq" data-i="${i}" type="button">Standaardvragen invullen</button>` : ""}</div>
+      <div><label class="lab" for="ck-${i}">Kernwoorden <span class="muted small">(met komma's)</span></label><input type="text" id="ck-${i}" data-ci="${i}" data-cf="kwText" value="${esc(c.kwText || "")}"></div>
       <div class="btnrow"><button class="btn quiet sm" data-act="cup" data-i="${i}" type="button" ${i === 0 ? "disabled" : ""}>Omhoog</button><button class="btn quiet sm" data-act="cdown" data-i="${i}" type="button" ${i === n - 1 ? "disabled" : ""}>Omlaag</button></div>
     </div>` : ""}
   </div>`;
@@ -1407,6 +1461,7 @@ async function go(view, o = {}) {
   if (S.edit && S.edit !== o.edit) stopImport(S.edit, true);
   if (S.vac && (view !== "proc" || o.pid !== undefined && o.pid !== S.vac.pid)) { stopImport(S.vac, true); if (view !== "proc") S.vac = null; }
   if (view !== "proc") S.cv = null;
+  if (view !== "proc" || (o.pid !== undefined && o.pid !== S.pid)) { S.crEdit = null; if (S.prep && !S.prep.busy) S.prep = null; }
   S.edit = view === "edit" ? (o.edit || S.edit) : null;
   if ("pid" in o) S.pid = o.pid;
   if ("cid" in o) S.cid = o.cid;
@@ -1487,8 +1542,51 @@ document.addEventListener("click", async ev => {
       return updProc(S.pid, { vacature: { tekst: text.slice(0, 20000), url: (p.vacature && p.vacature.url) || "", analyse: (p.vacature && p.vacature.analyse) || null, at: (p.vacature && p.vacature.at) || null }, updatedAt: Date.now() })
         .then(() => { e.redo = false; toast("Vacaturetekst opgeslagen"); keepScroll(render); }).catch(err => { t.disabled = false; fail(err); });
     }
-    case "vac-redo": vacState(p).redo = true; vacState(p).autoFilled = null; vacState(p).keptCrit = false; return keepScroll(render);
-    case "vac-redo-cancel": vacState(p).redo = false; return keepScroll(render);
+    case "cr-add": case "cr-edit": {
+      const i = act === "cr-add" ? -1 : +t.dataset.i, c = i >= 0 ? crits(p)[i] : null;
+      S.crEdit = { pid: S.pid, i, sure: false, error: null, draft: { name: c ? c.name : "", weight: c ? wOf(c) : 1, vragen: c ? (c.vragen || []).join("\n") : "", kw: c ? (c.kernwoorden || []).join(", ") : "", low: c ? c.low || "" : "", high: c ? c.high || "" : "" } };
+      vacState(p).redo = false; keepScroll(render);
+      { const f = $("#cr-name"); if (f) { f.focus({ preventScroll: true }); const box = $("#pv-edit"); if (box) box.scrollIntoView({ block: "nearest", behavior: "smooth" }); } }
+      return;
+    }
+    case "cr-cancel": S.crEdit = null; return keepScroll(render);
+    case "cr-save": case "cr-del": {
+      const st = S.crEdit; if (!st) return;
+      const list = clone(crits(p));
+      if (act === "cr-del") {
+        if (!st.sure) { st.sure = true; return keepScroll(render); }
+        list.splice(st.i, 1);
+      } else {
+        const d = st.draft, name = String(d.name || "").trim();
+        if (!name) { st.error = "Geef het criterium een naam."; return keepScroll(render); }
+        const base = st.i >= 0 ? list[st.i] : (() => { const used = new Set(idsInUse(S.pid).crit.concat(list.map(c => c.id))); let n = 1; while (used.has("k" + n)) n++; return { id: "k" + n, desc: "", bron: "" }; })();
+        const item = { ...base, name, weight: Math.min(3, Math.max(1, +d.weight || 1)), vragen: String(d.vragen || "").split("\n").map(x => x.trim()).filter(Boolean), kernwoorden: splitKw(d.kw), low: String(d.low || "").trim(), high: String(d.high || "").trim() };
+        if (st.i >= 0) list[st.i] = item; else list.push(item);
+      }
+      t.disabled = true;
+      return updProc(S.pid, { criteria: list, updatedAt: Date.now() }).then(() => {
+        S.procs.set(S.pid, { ...proc(), criteria: list });
+        S.crEdit = null; toast(act === "cr-del" ? "Criterium verwijderd" : "Criterium opgeslagen"); keepScroll(render);
+      }).catch(err => { t.disabled = false; fail(err); });
+    }
+    case "vac-prep": {
+      const e = vacState(p), text = cleanText(e.vacTekst || "");
+      if (text.length < 150) return toast("Plak eerst de vacaturetekst.");
+      if (!window.SK_PREP) return toast("Automatisch invullen is hier niet beschikbaar.");
+      const pid = S.pid; S.prep = { busy: true, pid }; keepScroll(render);
+      try {
+        await updProc(pid, { vacature: { tekst: text.slice(0, 20000) }, updatedAt: Date.now() });
+        const r = await window.SK_PREP(pid);
+        if (r && r.error) throw r;
+        try { const snap = await S.db.doc("procedures/" + pid).get(); const d = snap && snap.data(); if (d) S.procs.set(pid, d); } catch {}
+        S.prep = null; e.redo = false; e.autoFilled = r && r.filled && r.filled.length ? r.filled : null; e.keptCrit = !!(r && r.keptCrit);
+        toast("Het formulier staat klaar");
+      } catch (err) { S.prep = { pid, error: (err && (err.error || err.message)) || "Het invullen lukte niet. Probeer het opnieuw." }; }
+      if (S.view === "proc" && S.pid === pid) keepScroll(render);
+      return;
+    }
+    case "vac-redo": vacState(p).redo = true; S.crEdit = null; vacState(p).autoFilled = null; vacState(p).keptCrit = false; return keepScroll(render);
+    case "vac-redo-cancel": vacState(p).redo = false; S.prep = null; return keepScroll(render);
     case "addcand-quick": {
       const list = cands(p).slice(), used = new Set(idsInUse(S.pid).cand.concat(list.map(c => c.id)));
       let n = 1; while (used.has("c" + n)) n++;
@@ -1537,7 +1635,7 @@ document.addEventListener("click", async ev => {
       const sub = clone(subOf(S.uid, key));
       try {
         await writeMe(d => { delete d.scores[key]; });
-        S.formKey = key; S.form = { scores: sub.scores || {}, notes: sub.notes || {}, antw: sub.antw || {}, advies: sub.advies || null, motivatie: sub.motivatie || "" };
+        S.formKey = key; S.form = { scores: sub.scores || {}, notes: sub.notes || {}, antw: sub.antw || {}, advies: sub.advies || null, motivatie: sub.motivatie || "", vrij: sub.vrij || "" };
         S.formDirty = true; S.errors = null; S.uniformAck = false; S.saveText = "Bewaren…"; flushDraft(); render();
       } catch (err) { fail(err); }
       return;
@@ -1588,7 +1686,7 @@ document.addEventListener("click", async ev => {
       if (act === "ana-add") picks = picks.filter(c => !same(c));
       if (!picks.length) return toast(act === "ana-add" && e.pick.some(Boolean) ? "Deze criteria staan er al in." : "Vink eerst minstens één criterium aan.");
       if (act === "ana-replace") { if (e.id) e.usedCrit = e.usedCrit.concat(e.criteria.map(c => c.id)); e.criteria = []; e.open = []; }
-      picks.forEach(c => e.criteria.push({ id: newCritId(), name: c.naam, desc: c.waar_let_je_op, low: c.anker_1, high: c.anker_4, weight: c.gewicht, vragenText: c.vragen.join("\n"), bron: c.waarom }));
+      picks.forEach(c => e.criteria.push({ id: newCritId(), name: c.naam, desc: c.waar_let_je_op, low: c.anker_1, high: c.anker_4, weight: c.gewicht, vragenText: c.vragen.join("\n"), kwText: (c.kernwoorden || []).join(", "), bron: c.waarom }));
       e.pick = e.analyse.criteria.map(c => !sameName(e, c));
       e.anaOpen = false; e.critTouched = true; e.autoFilled = null;
       rerenderEdit();
@@ -1597,7 +1695,7 @@ document.addEventListener("click", async ev => {
     }
     case "ctoggle": { const id = e.criteria[i].id; e.open = e.open.includes(id) ? e.open.filter(x => x !== id) : e.open.concat(id); return rerenderEdit(); }
     case "addlib": e.critTouched = true; e.criteria.push(editCrit(LIB[i], newCritId())); return rerenderEdit();
-    case "addcrit": e.critTouched = true; { const id = newCritId(); e.criteria.push({ id, name: "", desc: "", low: "", high: "", weight: 1, vragenText: "", bron: "" }); e.open.push(id); rerenderEdit(); const n = document.getElementById("cn-" + (e.criteria.length - 1)); if (n) n.focus(); return; }
+    case "addcrit": e.critTouched = true; { const id = newCritId(); e.criteria.push({ id, name: "", desc: "", low: "", high: "", weight: 1, vragenText: "", kwText: "", bron: "" }); e.open.push(id); rerenderEdit(); const n = document.getElementById("cn-" + (e.criteria.length - 1)); if (n) n.focus(); return; }
     case "libq": e.critTouched = true; { const l = libFor(e.criteria[i].name); if (l) e.criteria[i].vragenText = l.vragen.join("\n"); return rerenderEdit(); }
     case "cup": e.critTouched = true; if (i > 0) [e.criteria[i - 1], e.criteria[i]] = [e.criteria[i], e.criteria[i - 1]]; return rerenderEdit();
     case "cdown": e.critTouched = true; if (i < e.criteria.length - 1) [e.criteria[i + 1], e.criteria[i]] = [e.criteria[i], e.criteria[i + 1]]; return rerenderEdit();
@@ -1620,7 +1718,7 @@ document.addEventListener("click", async ev => {
       if (problems.length) { $("#ederr").innerHTML = `<div class="errors"><strong>Nog niet compleet</strong><ul>${problems.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>`; return; }
       const now = Date.now();
       const data = { title: e.title.trim(), team: e.team.trim(), ronde: e.ronde.trim(), anonymous: !!e.anonymous, hideRaters: !!e.hideRaters,
-        criteria: cs.map(c => ({ id: c.id, name: c.name.trim(), desc: c.desc.trim(), low: c.low.trim(), high: c.high.trim(), weight: wOf(c), vragen: c.vragenText.split("\n").map(x => x.trim()).filter(Boolean), bron: c.bron || "" })),
+        criteria: cs.map(c => ({ id: c.id, name: c.name.trim(), desc: c.desc.trim(), low: c.low.trim(), high: c.high.trim(), weight: wOf(c), vragen: c.vragenText.split("\n").map(x => x.trim()).filter(Boolean), kernwoorden: splitKw(c.kwText), bron: c.bron || "" })),
         candidates: e.candidates.map((k, n) => ({ id: k.id, code: k.code.trim() || "Kandidaat " + (n + 1), name: e.anonymous ? "" : k.name.trim(), tijd: k.tijd || "" })),
         gesprekken: (e.gesprekken || "").trim(), updatedAt: now };
       if (e.vacTekst || e.analyse || e.url) data.vacature = { tekst: cleanText(e.vacTekst).slice(0, 20000), analyse: e.analyse || null, at: e.anaAt || null, url: (e.url || "").trim() };
@@ -1666,12 +1764,14 @@ document.addEventListener("change", ev => {
 document.addEventListener("input", ev => {
   const t = ev.target;
   if (t.classList && t.classList.contains("ruled")) sizeRuled(t);
-  if (t.matches("#scoreform [data-antw]")) { const c = t.dataset.antw; S.form.antw[c] = S.form.antw[c] || {}; S.form.antw[c][t.dataset.qi] = t.value; scheduleDraft(); scheduleDV(t); }
-  else if (t.matches("#scoreform [data-note]")) { S.form.notes[t.dataset.note] = t.value; const h = document.getElementById("h-" + t.dataset.note); if (h) h.innerHTML = nudgeHTML(t.value); scheduleDraft(); formChanged(); }
+  if (t.matches("#scoreform [data-antw]")) { const c = t.dataset.antw; S.form.antw[c] = S.form.antw[c] || {}; S.form.antw[c][t.dataset.qi] = t.value; scheduleDraft(); scheduleDV(t); kwRefresh(c); }
+  else if (t.matches("#scoreform [data-note]")) { S.form.notes[t.dataset.note] = t.value; const h = document.getElementById("h-" + t.dataset.note); if (h) h.innerHTML = nudgeHTML(t.value); scheduleDraft(); formChanged(); kwRefresh(t.dataset.note); }
+  else if (t.id === "vrij" && S.form) { S.form.vrij = t.value; scheduleDraft(); crits(proc()).forEach(cr => kwRefresh(cr.id)); }
   else if (t.id === "motivatie") { S.form.motivatie = t.value; const h = $("#h-motivatie"); if (h) h.innerHTML = nudgeHTML(t.value); scheduleDraft(); }
   else if (t.id === "member-q" && S.edit) { S.edit.q = t.value; searchMembers(t.value); }
   else if (curEd() && t.id === "e-vac" && /^\s*https?:\/\/\S+\s*$/i.test(t.value)) { const e = curEd(); e.url = cleanUrl(t.value); e.vacTekst = ""; t.value = ""; const u = $("#e-url"); if (u) u.value = e.url; stopImport(e, true); e.imp = null; renderUrl(); toast("Dat is een link. Hij staat nu bij Link naar de vacature."); }
   else if (curEd() && t.dataset.f && t.type !== "checkbox") { const e = curEd(); e[t.dataset.f] = t.value; if (e.imp && e.imp.state === "manual" && (t.id === "e-url" || (t.id === "e-vac" && t.value.trim().length > 80))) { e.imp = null; renderUrl(); } }
+  else if (S.crEdit && t.dataset.cr) { S.crEdit.draft[t.dataset.cr] = t.value; S.crEdit.error = null; if (S.crEdit.sure) S.crEdit.sure = false; }
   else if (S.cv && t.id === "cv-brief") S.cv.brief = t.value;
   else if (S.cv && t.id === "cv-anon") S.cv.anon = t.value;
   else if (S.cv && t.id === "cv-code") S.cv.code = t.value;
